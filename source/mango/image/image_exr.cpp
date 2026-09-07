@@ -896,6 +896,11 @@ private:
 bool FastHufDecoder::build(const u8*& table, int numBytes, int minSymbol, int maxSymbol, int rleSymbol)
 {
     _rleSymbol = rleSymbol;
+    _numSymbols = 0;
+    _minCodeLength = 255;
+    _maxCodeLength = 0;
+    delete[] _idToSymbol;
+    _idToSymbol = nullptr;
 
     std::vector<u64> symbols;
 
@@ -1209,7 +1214,12 @@ bool hufUncompress(const u8* compressed, int nCompressed, std::vector<u16>& outp
     hufClearDecTable(hdec.data());
     hufUnpackEncTable(&compressed, nCompressed, im, iM, freq.data());
 
-    hufBuildDecTable(freq.data(), im, iM, hdec.data());
+    if (!hufBuildDecTable(freq.data(), im, iM, hdec.data()))
+    {
+        hufFreeDecTable(hdec.data());
+        return false;
+    }
+
     hufDecode(freq.data(), hdec.data(), compressed, nBits, iM, output.size(), output.data());
 
     hufFreeDecTable(hdec.data());

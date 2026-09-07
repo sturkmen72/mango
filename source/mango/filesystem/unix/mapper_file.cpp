@@ -84,6 +84,9 @@ namespace
 
                         if (m_address == MAP_FAILED)
                         {
+                            m_address = nullptr;
+                            ::close(m_file);
+                            m_file = -1;
                             MANGO_EXCEPTION("[mapper.file] Memory mapping \"{}\" failed.", filename);
                         }
 

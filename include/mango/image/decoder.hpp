@@ -132,6 +132,9 @@ namespace mango::image
         std::atomic<bool> cancelled { false };
         std::string name;
         ImageHeader header;
+
+        // Non-owning views. Lifetime is tied to the decoder instance (or to side
+        // buffers it owns, such as Interface::m_icc). Do not use after destruction.
         ConstMemory icc;
         ConstMemory exif;
 

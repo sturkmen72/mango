@@ -607,7 +607,16 @@ namespace
 
             // decode
             ImageDecodeStatus status = decoder.decode(surface, options, 0, 0, 0);
-            MANGO_UNREFERENCED(status);
+            if (!status.success)
+            {
+                printLine(Print::Warning, status.info);
+                delete[] surface.image;
+                delete surface.palette;
+                surface.image = nullptr;
+                surface.palette = nullptr;
+                surface.width = 0;
+                surface.height = 0;
+            }
         }
 
         return surface;

@@ -89,6 +89,8 @@ namespace
                     }
                     else
                     {
+                        CloseHandle(m_file);
+                        m_file = INVALID_HANDLE_VALUE;
                         MANGO_EXCEPTION("[FileMemory] Memory \"{}\" mapping failed.", filename);
                     }
                 }

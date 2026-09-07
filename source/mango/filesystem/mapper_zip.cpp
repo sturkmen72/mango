@@ -2,6 +2,7 @@
     MANGO Multimedia Development Platform
     Copyright (C) 2012-2025 Twilight Finland 3D Oy Ltd. All rights reserved.
 */
+#include <memory>
 #include <mango/core/pointer.hpp>
 #include <mango/core/string.hpp>
 #include <mango/core/exception.hpp>
@@ -720,7 +721,8 @@ namespace mango::filesystem
             const u8* address = start + offset;
             u64 size = 0;
 
-            u8* buffer = nullptr; // remember allocated memory
+            // Owned decompression/decryption buffer; released to VirtualMemoryZIP on success.
+            std::unique_ptr<u8[]> owned;
 
             //printLine("[ZIP] compression: {}, encryption: {}", int(header.compression), int(header.encryption));
 
@@ -737,17 +739,16 @@ namespace mango::filesystem
 
                     // NOTE: decryption capability reduced on 32 bit platforms
                     const size_t compressed_size = size_t(header.compressedSize);
-                    buffer = new u8[compressed_size];
+                    owned = std::make_unique<u8[]>(compressed_size);
 
-                    bool status = zip_decrypt(buffer, address, header.compressedSize,
+                    bool status = zip_decrypt(owned.get(), address, header.compressedSize,
                         dcheader, header.versionUsed & 0xff, header.crc, password);
                     if (!status)
                     {
-                        delete[] buffer;
                         MANGO_EXCEPTION("[mapper.zip] Decryption failed (probably incorrect password).");
                     }
 
-                    address = buffer;
+                    address = owned.get();
                     break;
                 }
 
@@ -808,7 +809,7 @@ namespace mango::filesystem
                     }
 
                     // Allocate plaintext buffer
-                    buffer = new u8[encrypted_size];
+                    owned = std::make_unique<u8[]>(encrypted_size);
 
                     // Initialize AES with just the first 32 bytes (AES key)
                     AES aes(derived + 0, int(key_length * 8));
@@ -817,9 +818,9 @@ namespace mango::filesystem
                     u8 counter[16] = { 0 };
                     counter[0] = 1;
 
-                    aes.ctr_decrypt(buffer, encrypted_data, encrypted_size, counter);
+                    aes.ctr_decrypt(owned.get(), encrypted_data, encrypted_size, counter);
 
-                    address = buffer;
+                    address = owned.get();
                     break;
                 }
             }
@@ -875,7 +876,6 @@ namespace mango::filesystem
 
                     if (lzma_propsize != 5)
                     {
-                        delete[] buffer;
                         MANGO_EXCEPTION("[mapper.zip] Incorrect LZMA header.");
                     }
 
@@ -907,24 +907,22 @@ namespace mango::filesystem
             if (compressor.decompress)
             {
                 const size_t uncompressed_size = size_t(header.uncompressedSize);
-                u8* uncompressed_buffer = new u8[uncompressed_size];
+                std::unique_ptr<u8[]> uncompressed_buffer = std::make_unique<u8[]>(uncompressed_size);
 
                 ConstMemory input(address, size_t(header.compressedSize));
-                Memory output(uncompressed_buffer, size_t(header.uncompressedSize));
+                Memory output(uncompressed_buffer.get(), size_t(header.uncompressedSize));
 
                 CompressionStatus status = compressor.decompress(output, input);
 
-                delete[] buffer;
-                buffer = uncompressed_buffer;
+                owned = std::move(uncompressed_buffer);
+                address = owned.get();
 
                 if (!status)
                 {
-                    delete[] buffer;
                     MANGO_EXCEPTION("[mapper.zip] {}", status.info);
                 }
 
                 // use decode_buffer as memory map
-                address = buffer;
                 size = header.uncompressedSize;
             }
             else if (size > 0)
@@ -936,7 +934,7 @@ namespace mango::filesystem
                 MANGO_EXCEPTION("[mapper.zip] Unsupported compression algorithm ({}).", header.compression);
             }
 
-            return std::make_unique<VirtualMemoryZIP>(address, buffer, size_t(size));
+            return std::make_unique<VirtualMemoryZIP>(address, owned.release(), size_t(size));
         }
 
         u64 getSize(const std::string& filename) const override

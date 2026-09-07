@@ -21,6 +21,7 @@ namespace
         heif_context* m_context = nullptr;
         heif_image_handle* m_image_handle = nullptr;
         Buffer m_icc;
+        bool m_heif_initialized = false;
         int m_luma_bpp = 0;
         int m_chroma_bpp = 0;
         bool m_has_alpha = false;
@@ -35,6 +36,8 @@ namespace
                 header.setError("[ImageDecoder.HEIF] heif_init FAILED ({}).", error.message);
                 return;
             }
+
+            m_heif_initialized = true;
 
             if (memory.size < 12)
             {
@@ -58,7 +61,7 @@ namespace
             m_context = heif_context_alloc();
             if (!m_context)
             {
-                header.setError("[ImageDecoder.HEIF]heif_context_alloc FAILED.");
+                header.setError("[ImageDecoder.HEIF] heif_context_alloc FAILED.");
                 return;
             }
 
@@ -172,7 +175,10 @@ namespace
                 heif_context_free(m_context);
             }
 
-            heif_deinit();
+            if (m_heif_initialized)
+            {
+                heif_deinit();
+            }
         }
 
         void populateInspect(ImageInspect& report) const override
@@ -213,7 +219,7 @@ namespace
             decode_options->ignore_transformations = true;
 
             heif_image* image = nullptr;
-            heif_error error = heif_decode_image(m_image_handle, &image, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, nullptr);
+            heif_error error = heif_decode_image(m_image_handle, &image, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, decode_options);
 
             heif_decoding_options_free(decode_options);
 

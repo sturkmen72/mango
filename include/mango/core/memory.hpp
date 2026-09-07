@@ -111,6 +111,8 @@ namespace mango
     // -----------------------------------------------------------------------
 
     using Memory = detail::Memory<u8>;
+    // Non-owning byte range. The caller (or a VirtualMemory / mapper parent) must
+    // keep the storage alive for as long as the view is used.
     using ConstMemory = detail::Memory<const u8>;
 
     class SharedMemory

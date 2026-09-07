@@ -15,6 +15,9 @@ namespace mango::filesystem
 
     // Logical path handle. Copy and move are shallow: they share the same open
     // container mapping and directory index cache (internal Mapper).
+    //
+    // Nested archives keep parent VirtualMemory blobs alive in Mapper::m_parent_memories
+    // so ConstMemory views into decompressed entries remain valid for the Path lifetime.
     class Path
     {
     protected:
