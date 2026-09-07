@@ -8,5 +8,6 @@
 #include <mango/math/matrix.hpp>
 #include <mango/math/quaternion.hpp>
 #include <mango/math/geometry.hpp>
+#include <mango/math/camera.hpp>
 #include <mango/math/spline.hpp>
 #include <mango/math/srgb.hpp>
